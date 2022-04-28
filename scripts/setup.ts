@@ -16,6 +16,9 @@ import { pkgConf } from "yargs";
 const replace = require("replace-in-file");
 const setup = require("../setup.json");
 const pkg = require("../package.json");
+import Logger from "@ptkdev/logger";
+
+const logger = new Logger();
 
 (async () => {
 	try {

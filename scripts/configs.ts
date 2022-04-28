@@ -3,7 +3,7 @@
  * =====================
  * Check if configs/config.js exist, if don't exist rename .tpl
  *
- * @contributors: Patryk Rzucidło [@ptkdev] <support@ptkdev.io> (https://ptk.dev)
+ * @contributors: Thingnoy <boyskypart@gmail.com> (https://github.com/thingnoy)
  *
  * @license: MIT License
  *

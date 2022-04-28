@@ -2,8 +2,8 @@
 	"contributions": {
 		"language": "English",
 		"license": "CC BY 4.0",
-		"contributors": ["Patryk Rzucidło [@ptkdev] <support@ptkdev.io> (https://ptk.dev)"]
+		"contributors": ["Thingnoy <boyskypart@gmail.com> (https://github.com/thingnoy)"]
 	},
-	"app_name": "svelte-webcomponent-boilerplate",
+	"app_name": "wc-datepicker",
 	"hello": "Hello {{name}}!"
 }

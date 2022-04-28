@@ -1,6 +1,6 @@
 {
-	"projectName": "ptkdev-boilerplate/svelte-webcomponent-boilerplate",
-	"projectOwner": "ptkdev",
+	"projectName": "thingnoy/wc-datepicker",
+	"projectOwner": "thingnoy",
 	"repoType": "github",
 	"repoHost": "https://github.com",
 	"files": ["README.md"],

@@ -3,7 +3,7 @@
  * =====================
  * Create svelte app
  *
- * @contributors: Patryk Rzucidło [@ptkdev] <support@ptkdev.io> (https://ptk.dev)
+ * @contributors: Thingnoy <boyskypart@gmail.com> (https://github.com/thingnoy)
  *
  * @license: MIT License
  *
