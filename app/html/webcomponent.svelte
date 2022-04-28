@@ -12,14 +12,25 @@
 	 */
 	// import webcomponent from "@app/functions/webcomponent";
 	// import { translate } from "@app/translations/translate";
-	import { onMount, createEventDispatcher, tick } from "svelte";
+	import { onMount, tick } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { formatDate } from "@app/utils/date";
 	import { keyCodes, keyCodesArray } from "./keyCodes";
 	import { getMonths, areDatesEquivalent } from "./helpers";
 	import ClickOutside from "./ClickOutside";
+	import { get_current_component } from "svelte/internal";
 
-	const dispatch = createEventDispatcher();
+	const thisComponent = get_current_component();
+	const dispatchEvent = (name, detail) => {
+		thisComponent.dispatchEvent(
+			new CustomEvent(name, {
+				detail,
+				composed: true, // propagate to the Real DOM, handled in index.html
+			}),
+		);
+	};
+
+	const dispatch = dispatchEvent;
 	const today = new Date();
 	const oneYear = 1000 * 60 * 60 * 24 * 365;
 
