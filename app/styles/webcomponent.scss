@@ -74,3 +74,152 @@
 		margin-top: -270px;
 	}
 }
+
+$calendar-btn-padding: 10px 10px !default;
+$calendar-btn-border-radius: 7px !default;
+$calendar-padding: 0 10px 10px 10px !default;
+
+$day-is-disalbed-opacity: 0.35 !default;
+$day-is-outside-month-opacity: 0.75 !default;
+
+// **************************************************** popover.scss
+// Language: scss
+.sc-popover {
+	position: relative;
+}
+
+.contents-wrapper {
+	transform: translate(-50%, -50%);
+	position: fixed;
+	/*top: 50%;*/
+	/*left: 50%;*/
+	transition: none;
+	z-index: 11;
+	display: none;
+}
+
+.contents {
+	/*background: #fff;*/
+	box-shadow: 0 10px 26px rgba(0, 0, 0, 0.4);
+	border-radius: 6px;
+	opacity: 0.8;
+	padding-top: 0;
+	display: none;
+	animation: grow 200ms forwards cubic-bezier(0.92, 0.09, 0.18, 1.05);
+}
+
+.contents-inner {
+	animation: fadeIn 400ms forwards;
+}
+
+.contents-wrapper.visible {
+	display: block;
+}
+
+.contents-wrapper.visible .contents {
+	opacity: 1;
+	transform: scale(1);
+	display: block;
+}
+
+.contents-wrapper.shrink .contents {
+	animation: shrink 150ms forwards cubic-bezier(0.92, 0.09, 0.18, 1.05);
+}
+
+@keyframes grow {
+	0% {
+		transform: scale(0.9, 0.1);
+		opacity: 0;
+	}
+	30% {
+		opacity: 1;
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+@keyframes shrink {
+	0% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	70% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0;
+		transform: scale(0.9, 0.1);
+	}
+}
+
+@keyframes fadeIn {
+	0% {
+		opacity: 0;
+	}
+	50% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+
+// **************************************************** datepicker.scss
+// Language: scss
+.datepicker {
+	display: inline-block;
+	margin: 0 auto;
+	text-align: center;
+	overflow: visible;
+}
+
+.calendar-button {
+	padding: $calendar-btn-padding;
+	border: 1px solid var(--button-border-color);
+	display: block;
+	text-align: center;
+	width: 300px;
+	text-decoration: none;
+	cursor: pointer;
+	background: var(--button-background-color);
+	color: var(--button-text-color);
+	border-radius: $calendar-btn-border-radius;
+	box-shadow: 0 0 3px rgba(0, 0, 0, 0.1);
+}
+
+.calendar {
+	box-sizing: border-box;
+	position: relative;
+	overflow: hidden;
+	user-select: none;
+	width: 100vw;
+	padding: $calendar-padding;
+}
+
+.calendar-wrapper {
+	overflow: hidden;
+	background: white;
+	border-radius: 6px;
+}
+
+@media (min-width: 480px) {
+	.calendar {
+		height: auto;
+		width: 340px;
+		max-width: 100%;
+	}
+}
+
+.legend {
+	color: #4a4a4a;
+	padding: 10px 0;
+	margin-bottom: 5px;
+}
+
+.legend span {
+	width: 14.285714%;
+	display: inline-block;
+	text-align: center;
+}

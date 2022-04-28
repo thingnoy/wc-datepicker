@@ -1,6 +1,6 @@
 <svelte:options tag="wc-datepicker" />
 
-<script lang="ts">
+<script>
 	/**
 	 * Svelte WebComponent DatePicker
 	 * =====================
@@ -13,9 +13,407 @@
 	import webcomponent from "@app/functions/webcomponent";
 	import { translate } from "@app/translations/translate";
 
-	export let header: string; // headerText || $$props["header-text"] if you use dash separator
-	export let flip: string;
-	export let footer: string;
+	import { onMount, createEventDispatcher, tick } from "svelte";
+
+	import { formatDate } from "@app/utils/date";
+	import Month from "./ui/Datepicker/Month.svelte";
+	import NavBar from "./ui/Datepicker/NavBar.svelte";
+	import Popover from "./ui/Datepicker/Popover.svelte";
+
+	import { keyCodes, keyCodesArray } from "./keyCodes";
+	import { getMonths } from "./helpers";
+	import ClickOutside from "./ClickOutside";
+
+	const dispatch = createEventDispatcher();
+	const today = new Date();
+	const oneYear = 1000 * 60 * 60 * 24 * 365;
+
+	export let header; // headerText || $$props["header-text"] if you use dash separator
+	export let flip;
+	export let footer;
+
+	let popover;
+
+	// month or day
+	export let defaultView = "day";
+	export let onlyMonth = false;
+	export let format = "YYYY/MM/DD";
+	export let start = new Date(Date.now() - oneYear);
+	export let end = new Date(Date.now() + oneYear);
+	export let selected = null;
+	export let dateChosen = false;
+	export let trigger = null;
+	export let selectableCallback = null;
+	export let weekStart = 0;
+	export let daysOfWeek = [
+		// ['Sunday', 'Sun'],
+		// ['Monday', 'Mon'],
+		// ['Tuesday', 'Tue'],
+		// ['Wednesday', 'Wed'],
+		// ['Thursday', 'Thu'],
+		// ['Friday', 'Fri'],
+		// ['Saturday', 'Sat'],
+		["อาทิตย์", "อา."],
+		["จันทร์", "จ."],
+		["อังคาร", "อ."],
+		["พุธ", "พ."],
+		["พฤหัสบดี", "พฤ."],
+		["ศุกร์", "ศ."],
+		["เสาร์", "ส."],
+	];
+	export let monthsOfYear = [
+		// ['January', 'Jan'],
+		// ['February', 'Feb'],
+		// ['March', 'Mar'],
+		// ['April', 'Apr'],
+		// ['May', 'May'],
+		// ['June', 'Jun'],
+		// ['July', 'Jul'],
+		// ['August', 'Aug'],
+		// ['September', 'Sep'],
+		// ['October', 'Oct'],
+		// ['November', 'Nov'],
+		// ['December', 'Dec'],
+		["มกราคม", "ม.ค."],
+		["กุมภาพันธ์", "ก.พ."],
+		["มีนาคม", "มี.ค."],
+		["เมษายน", "เม.ย."],
+		["พฤษภาคม", "พ.ค."],
+		["มิถุนายน", "มิ.ย."],
+		["กรกฎาคม", "ก.ค."],
+		["สิงหาคม", "ส.ค."],
+		["กันยายน", "ก.ย."],
+		["ตุลาคม", "ต.ค."],
+		["พฤศจิกายน", "พ.ย."],
+		["ธันวาคม", "ธ.ค."],
+	];
+
+	selected = selected
+		? selected.getTime() < start.getTime() || selected.getTime() > end.getTime()
+			? start
+			: selected
+		: null;
+
+	export let style = "";
+
+	// theming variables:
+	export let buttonBackgroundColor = "#fff";
+	export let buttonBorderColor = "#eee";
+	export let buttonTextColor = "#333";
+	export let highlightColor = "#f7901e";
+	export let dayBackgroundColor = "none";
+	export let dayTextColor = "#4a4a4a";
+	export let dayHighlightedBackgroundColor = "#efefef";
+	export let dayHighlightedTextColor = "#4a4a4a";
+
+	// internationalize({ daysOfWeek, monthsOfYear }); // TODO: check here
+	let sortedDaysOfWeek =
+		weekStart === 0
+			? daysOfWeek
+			: (() => {
+					let dow = daysOfWeek.slice();
+					dow.push(dow.shift());
+					return dow;
+			  })();
+
+	let highlighted = today;
+	let shouldShakeDate = false;
+	let shakeHighlightTimeout;
+	let month = today.getMonth();
+	let year = today.getFullYear();
+
+	let isOpen = false;
+	let isClosing = false;
+
+	today.setHours(0, 0, 0, 0);
+
+	function assignmentHandler(formatted) {
+		if (!trigger) {
+			return;
+		}
+		trigger.innerHTML = formatted;
+	}
+
+	$: months = getMonths(start, end, selectableCallback, weekStart);
+
+	let monthIndex = 0;
+	$: {
+		monthIndex = 0;
+		for (let i = 0; i < months.length; i += 1) {
+			if (months[i].month === month && months[i].year === year) {
+				monthIndex = i;
+			}
+		}
+	}
+	$: visibleMonth = months[monthIndex];
+	$: visibleMonthId = year + month / 100;
+	$: lastVisibleDate = visibleMonth?.weeks[visibleMonth.weeks.length - 1].days[6].date;
+	$: firstVisibleDate = visibleMonth?.weeks[0].days[0].date;
+	$: canIncrementMonth = monthIndex < months.length - 1;
+	$: canDecrementMonth = monthIndex > 0;
+	$: wrapperStyle = `
+    --button-background-color: ${buttonBackgroundColor};
+    --button-border-color: ${buttonBorderColor};
+    --button-text-color: ${buttonTextColor};
+    --highlight-color: ${highlightColor};
+    --day-background-color: ${dayBackgroundColor};
+    --day-text-color: ${dayTextColor};
+    --day-highlighted-background-color: ${dayHighlightedBackgroundColor};
+    --day-highlighted-text-color: ${dayHighlightedTextColor};
+    ${style}
+  `;
+
+	export let formattedSelected = selected;
+	$: {
+		formattedSelected = typeof format === "function" ? format(selected) : formatDate(selected, format);
+	}
+
+	function changeMonth(selectedMonth) {
+		month = selectedMonth;
+		highlighted = new Date(year, month, 1);
+	}
+
+	function incrementMonth(direction, day = 1) {
+		if (direction === 1 && !canIncrementMonth) {
+			return;
+		}
+		if (direction === -1 && !canDecrementMonth) {
+			return;
+		}
+		let current = new Date(year, month, 1);
+		current.setMonth(current.getMonth() + direction);
+		month = current.getMonth();
+		year = current.getFullYear();
+		highlighted = new Date(year, month, day);
+	}
+
+	function getDefaultHighlighted() {
+		const date = selected ? selected : today;
+		return new Date(date);
+	}
+
+	const getDay = (m, d, y) => {
+		let theMonth = months.find((aMonth) => aMonth.month === m && aMonth.year === y);
+		if (!theMonth) {
+			return null;
+		}
+		// eslint-disable-next-line
+		for (let i = 0; i < theMonth.weeks.length; ++i) {
+			// eslint-disable-next-line
+			for (let j = 0; j < theMonth.weeks[i].days.length; ++j) {
+				let aDay = theMonth.weeks[i].days[j];
+				if (aDay.month === m && aDay.day === d && aDay.year === y) {
+					return aDay;
+				}
+			}
+		}
+		return null;
+	};
+
+	function incrementDayHighlighted(amount) {
+		let proposedDate = new Date(highlighted);
+		proposedDate.setDate(highlighted.getDate() + amount);
+		let correspondingDayObj = getDay(proposedDate.getMonth(), proposedDate.getDate(), proposedDate.getFullYear());
+		if (!correspondingDayObj || !correspondingDayObj.isInRange) {
+			return;
+		}
+		highlighted = proposedDate;
+		if (amount > 0 && highlighted > lastVisibleDate) {
+			incrementMonth(1, highlighted.getDate());
+		}
+		if (amount < 0 && highlighted < firstVisibleDate) {
+			incrementMonth(-1, highlighted.getDate());
+		}
+	}
+
+	function checkIfVisibleDateIsSelectable(date) {
+		const proposedDay = getDay(date.getMonth(), date.getDate(), date.getFullYear());
+		return proposedDay && proposedDay.selectable;
+	}
+
+	function shakeDate(date) {
+		clearTimeout(shakeHighlightTimeout);
+		shouldShakeDate = date;
+		shakeHighlightTimeout = setTimeout(() => {
+			shouldShakeDate = false;
+		}, 700);
+	}
+
+	function assignValueToTrigger(formatted) {
+		assignmentHandler(formatted);
+	}
+
+	function registerSelection(chosen) {
+		if (!checkIfVisibleDateIsSelectable(chosen) && !onlyMonth) {
+			return shakeDate(chosen);
+		}
+		// eslint-disable-next-line
+		close();
+		selected = chosen;
+		dateChosen = true;
+		assignValueToTrigger(formattedSelected);
+		return dispatch("dateSelected", { date: chosen });
+	}
+
+	function handleKeyPress(evt) {
+		if (keyCodesArray.indexOf(evt.keyCode) === -1) {
+			return;
+		}
+		evt.stopPropagation();
+		switch (evt.keyCode) {
+			case keyCodes.left:
+				incrementDayHighlighted(-1);
+				break;
+			case keyCodes.up:
+				incrementDayHighlighted(-7);
+				break;
+			case keyCodes.right:
+				incrementDayHighlighted(1);
+				break;
+			case keyCodes.down:
+				incrementDayHighlighted(7);
+				break;
+			case keyCodes.pgup:
+				incrementMonth(-1);
+				break;
+			case keyCodes.pgdown:
+				incrementMonth(1);
+				break;
+			case keyCodes.escape:
+				// eslint-disable-next-line
+				close();
+				break;
+			case keyCodes.enter:
+				registerSelection(highlighted);
+				break;
+			default:
+				break;
+		}
+	}
+
+	function registerClose() {
+		document.removeEventListener("keydown", handleKeyPress);
+		dispatch("close");
+	}
+
+	function close() {
+		if (popover) {
+			closePopOver();
+		}
+		registerClose();
+	}
+
+	function registerOpen() {
+		highlighted = getDefaultHighlighted();
+		const date = selected ? selected : today;
+		month = date.getMonth();
+		year = date.getFullYear();
+		document.addEventListener("keydown", handleKeyPress);
+		dispatch("open");
+	}
+
+	function monthSelected(e) {
+		if (onlyMonth) {
+			const date = new Date(year, e.detail, 1);
+			registerSelection(date);
+		}
+
+		return changeMonth(e.detail);
+	}
+
+	// ********************************************* popover
+	let once = (el, evt, cb) => {
+		function handler() {
+			cb.apply(this, arguments);
+			el.removeEventListener(evt, handler);
+		}
+		el.addEventListener(evt, handler);
+	};
+
+	let w;
+	let triggerContainer;
+	let contentsAnimated;
+	let contentsWrapper;
+	let translateY = 0;
+	let translateX = 0;
+
+	export let closeOnClickOutside = true;
+	export const closePopOver = () => {
+		isClosing = true;
+		once(contentsAnimated, "animationend", () => {
+			isClosing = false;
+			isOpen = false;
+			dispatch("closed");
+			registerClose();
+		});
+	};
+
+	async function getDistanceToEdges() {
+		if (!isOpen) {
+			isOpen = true;
+		}
+		await tick();
+		let rect = contentsWrapper.getBoundingClientRect();
+		return {
+			top: rect.top + -1 * translateY,
+			bottom: window.innerHeight - rect.bottom + translateY,
+			left: rect.left + -1 * translateX,
+			right: document.body.clientWidth - rect.right + translateX,
+		};
+	}
+
+	async function getTranslate() {
+		let dist = await getDistanceToEdges();
+		let x;
+		let y;
+		if (w < 480) {
+			y = dist.bottom;
+		} else if (dist.top < 0) {
+			y = Math.abs(dist.top);
+		} else if (dist.bottom < 0) {
+			y = dist.bottom;
+		} else {
+			y = 0;
+		}
+		if (dist.left < 0) {
+			x = Math.abs(dist.left);
+		} else if (dist.right < 0) {
+			x = dist.right;
+		} else {
+			x = 0;
+		}
+		return { x, y };
+	}
+
+	async function doOpenPopOver() {
+		const { x, y } = await getTranslate();
+
+		translateX = x;
+		translateY = y;
+		isOpen = true;
+
+		dispatch("opened");
+		registerOpen();
+	}
+
+	function clickOutside() {
+		if (isOpen && closeOnClickOutside) {
+			closePopOver();
+		}
+	}
+
+	onMount(() => {
+		const date = selected ? selected : today;
+		month = date.getMonth();
+		year = date.getFullYear();
+
+		// ******************* popover
+		if (!trigger) {
+			return;
+		}
+
+		triggerContainer.appendChild(trigger.parentNode.removeChild(trigger));
+	});
 
 	async function getHelloWorld() {
 		const { app } = await webcomponent({ text: translate("hello", { name: "boilerplate" }) });
@@ -24,6 +422,8 @@
 	}
 </script>
 
+<svelte:window bind:innerWidth={w} />
+
 <div id="webcomponent" part="webcomponent">
 	{header}
 	<div id="flip" part="flip">
@@ -31,7 +431,10 @@
 		<div part="div-2"><div part="div-2-2">{flip.split(",")[1]}</div></div>
 		<div part="div-3"><div part="div-3-3">{flip.split(",")[2]}</div></div>
 	</div>
-	{footer}<br /><br />
+	{footer}
+	<br />
+	<br />
+
 	{#await getHelloWorld()}
 		<p>loading</p>
 	{:then data}
@@ -39,6 +442,73 @@
 	{:catch error}
 		<p style="color: red">{error.message}</p>
 	{/await}
+
+	<div>
+		TTTTTTTTT
+		<button class="calendar-button" type="button">{formattedSelected}</button>
+	</div>
+
+	<div class="datepicker" class:open={isOpen} class:closing={isClosing} style={wrapperStyle}>
+		<div class="sc-popover" bind:this={popover} use:ClickOutside on:clickOutside={clickOutside}>
+			<div class="trigger" on:click={doOpenPopOver} bind:this={triggerContainer}>
+				<div slotx="trigger">
+					<slot {selected} {formattedSelected}>
+						{#if !trigger}
+							<button class="calendar-button" type="button">
+								{formattedSelected}
+							</button>
+						{/if}
+					</slot>
+				</div>
+			</div>
+
+			<div
+				class="contents-wrapper"
+				class:visible={isOpen}
+				class:shrink={isClosing}
+				style="transform: translate(-50%,-50%) translate({translateX}px, {translateY}px)"
+				bind:this={contentsWrapper}
+			>
+				<div class="contents" bind:this={contentsAnimated}>
+					<div class="contents-inner">
+						{#if isOpen}
+							<div slotx="contents">
+								<div class="calendar-wrapper">
+									<div class="calendar">
+										<NavBar
+											monthSelectorOpen={defaultView === "month"}
+											{month}
+											{year}
+											{canIncrementMonth}
+											{canDecrementMonth}
+											{start}
+											{end}
+											{monthsOfYear}
+											on:monthSelected={monthSelected}
+											on:incrementMonth={(e) => incrementMonth(e.detail)}
+										/>
+										<div class="legend">
+											{#each sortedDaysOfWeek as day}
+												<span>{day[1]}</span>
+											{/each}
+										</div>
+										<Month
+											{visibleMonth}
+											{selected}
+											{highlighted}
+											{shouldShakeDate}
+											id={visibleMonthId}
+											on:dateSelected={(e) => registerSelection(e.detail)}
+										/>
+									</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
 <style lang="scss">
