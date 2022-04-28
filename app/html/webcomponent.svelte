@@ -402,6 +402,44 @@
 		}
 	}
 
+	// ********************************************* navbar
+	let monthSelectorOpen = defaultView === "month";
+	let availableMonths;
+
+	$: {
+		let isOnLowerBoundary = start.getFullYear() === year;
+		let isOnUpperBoundary = end.getFullYear() === year;
+		availableMonths = monthsOfYear.map((m, i) => {
+			return Object.assign(
+				{},
+				{
+					name: m[0],
+					abbrev: m[1],
+				},
+				{
+					selectable:
+						(!isOnLowerBoundary && !isOnUpperBoundary) ||
+						((!isOnLowerBoundary || i >= start.getMonth()) && (!isOnUpperBoundary || i <= end.getMonth())),
+				},
+			);
+		});
+	}
+
+	function toggleMonthSelectorOpen() {
+		monthSelectorOpen = !monthSelectorOpen;
+	}
+
+	function navbarMonthSelected(event, { m, i }) {
+		event.stopPropagation();
+		if (!m.selectable) {
+			return;
+		}
+		dispatch("monthSelected", i);
+		toggleMonthSelectorOpen();
+		monthSelected();
+	}
+
+	// ********************************************* xxx
 	onMount(() => {
 		const date = selected ? selected : today;
 		month = date.getMonth();
@@ -475,18 +513,43 @@
 							<div slotx="contents">
 								<div class="calendar-wrapper">
 									<div class="calendar">
-										<NavBar
-											monthSelectorOpen={defaultView === "month"}
-											{month}
-											{year}
-											{canIncrementMonth}
-											{canDecrementMonth}
-											{start}
-											{end}
-											{monthsOfYear}
-											on:monthSelected={monthSelected}
-											on:incrementMonth={(e) => incrementMonth(e.detail)}
-										/>
+
+										<div class="Navbar title">
+											<div class="heading-section">
+												<div
+													class="control"
+													class:enabled={canDecrementMonth}
+													on:click={() => incrementMonth(-1)}
+												>
+													<i class="arrow left" />
+												</div>
+												<div class="label" on:click={toggleMonthSelectorOpen}>
+													{monthsOfYear[month][0]}
+													{year}
+												</div>
+												<div
+													class="control"
+													class:enabled={canIncrementMonth}
+													on:click={() => incrementMonth(1)}
+												>
+													<i class="arrow right" />
+												</div>
+											</div>
+											<div class="month-selector" class:open={monthSelectorOpen}>
+												{#each availableMonths as monthDefinition, index}
+													<div
+														class="month-selector--month"
+														class:selected={index === month}
+														class:selectable={monthDefinition.selectable}
+														on:click={(e) =>
+															navbarMonthSelected(e, { m: monthDefinition, i: index })}
+													>
+														<span>{monthDefinition.abbrev}</span>
+													</div>
+												{/each}
+											</div>
+										</div>
+
 										<div class="legend">
 											{#each sortedDaysOfWeek as day}
 												<span>{day[1]}</span>
