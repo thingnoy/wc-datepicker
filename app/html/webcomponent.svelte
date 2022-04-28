@@ -10,28 +10,20 @@
 	 * @license: MIT License
 	 *
 	 */
-	import webcomponent from "@app/functions/webcomponent";
-	import { translate } from "@app/translations/translate";
-
+	// import webcomponent from "@app/functions/webcomponent";
+	// import { translate } from "@app/translations/translate";
 	import { onMount, createEventDispatcher, tick } from "svelte";
-
+	import { fly, fade } from "svelte/transition";
 	import { formatDate } from "@app/utils/date";
-	import Month from "./ui/Datepicker/Month.svelte";
-	import NavBar from "./ui/Datepicker/NavBar.svelte";
-	import Popover from "./ui/Datepicker/Popover.svelte";
-	import Week from "./ui/Datepicker/Week.svelte";
-
 	import { keyCodes, keyCodesArray } from "./keyCodes";
-	import { getMonths } from "./helpers";
+	import { getMonths, areDatesEquivalent } from "./helpers";
 	import ClickOutside from "./ClickOutside";
 
 	const dispatch = createEventDispatcher();
 	const today = new Date();
 	const oneYear = 1000 * 60 * 60 * 24 * 365;
 
-	export let header; // headerText || $$props["header-text"] if you use dash separator
-	export let flip;
-	export let footer;
+	// export let header; // headerText || $$props["header-text"] if you use dash separator
 
 	let popover;
 
@@ -107,7 +99,6 @@
 	export let dayHighlightedBackgroundColor = "#efefef";
 	export let dayHighlightedTextColor = "#4a4a4a";
 
-	// internationalize({ daysOfWeek, monthsOfYear }); // TODO: check here
 	let sortedDaysOfWeek =
 		weekStart === 0
 			? daysOfWeek
@@ -451,7 +442,6 @@
 		lastId = id;
 	}
 
-	// ********************************************* xxx
 	onMount(() => {
 		const date = selected ? selected : today;
 		month = date.getMonth();
@@ -465,39 +455,16 @@
 		triggerContainer.appendChild(trigger.parentNode.removeChild(trigger));
 	});
 
-	async function getHelloWorld() {
-		const { app } = await webcomponent({ text: translate("hello", { name: "boilerplate" }) });
+	// async function getHelloWorld() {
+	// 	const { app } = await webcomponent({ text: translate("hello", { name: "boilerplate" }) });
 
-		return app();
-	}
+	// 	return app();
+	// }
 </script>
 
 <svelte:window bind:innerWidth={w} />
 
 <div id="webcomponent" part="webcomponent">
-	{header}
-	<div id="flip" part="flip">
-		<div part="div-1"><div part="div-1-1">{flip.split(",")[0]}</div></div>
-		<div part="div-2"><div part="div-2-2">{flip.split(",")[1]}</div></div>
-		<div part="div-3"><div part="div-3-3">{flip.split(",")[2]}</div></div>
-	</div>
-	{footer}
-	<br />
-	<br />
-
-	{#await getHelloWorld()}
-		<p>loading</p>
-	{:then data}
-		<p>{data}</p>
-	{:catch error}
-		<p style="color: red">{error.message}</p>
-	{/await}
-
-	<div>
-		TTTTTTTTT
-		<button class="calendar-button" type="button">{formattedSelected}</button>
-	</div>
-
 	<div class="datepicker" class:open={isOpen} class:closing={isClosing} style={wrapperStyle}>
 		<div class="sc-popover" bind:this={popover} use:ClickOutside on:clickOutside={clickOutside}>
 			<div class="trigger" on:click={doOpenPopOver} bind:this={triggerContainer}>
@@ -505,7 +472,7 @@
 					<slot {selected} {formattedSelected}>
 						{#if !trigger}
 							<button class="calendar-button" type="button">
-								{formattedSelected}
+								{formattedSelected || "-"}
 							</button>
 						{/if}
 					</slot>
@@ -569,14 +536,36 @@
 
 										<div class="Month month-container">
 											{#each visibleMonth.weeks as week (week.id)}
-												<Week
-													days={week.days}
-													{selected}
-													{highlighted}
-													{shouldShakeDate}
-													{direction}
-													on:dateSelected={(e) => registerSelection(e.detail)}
-												/>
+												<div
+													class="Week week"
+													in:fly|local={{ x: direction * 50, duration: 180, delay: 90 }}
+													out:fade|local={{ duration: 180 }}
+												>
+													{#each week.days as day}
+														<div
+															class="day"
+															class:outside-month={!day.partOfMonth}
+															class:is-today={day.isToday}
+															class:is-disabled={!day.selectable}
+														>
+															<button
+																class="day--label"
+																class:selected={areDatesEquivalent(day.date, selected)}
+																class:highlighted={areDatesEquivalent(
+																	day.date,
+																	highlighted,
+																)}
+																class:shake-date={shouldShakeDate &&
+																	areDatesEquivalent(day.date, shouldShakeDate)}
+																class:disabled={!day.selectable}
+																type="button"
+																on:click={() => registerSelection(day.date)}
+															>
+																{day.date.getDate()}
+															</button>
+														</div>
+													{/each}
+												</div>
 											{/each}
 										</div>
 									</div>
