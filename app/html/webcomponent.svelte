@@ -19,6 +19,7 @@
 	import Month from "./ui/Datepicker/Month.svelte";
 	import NavBar from "./ui/Datepicker/NavBar.svelte";
 	import Popover from "./ui/Datepicker/Popover.svelte";
+	import Week from "./ui/Datepicker/Week.svelte";
 
 	import { keyCodes, keyCodesArray } from "./keyCodes";
 	import { getMonths } from "./helpers";
@@ -439,6 +440,17 @@
 		monthSelected();
 	}
 
+	// ********************************************* month
+	let id = visibleMonthId;
+
+	let lastId = id;
+	let direction;
+
+	$: {
+		direction = lastId < id ? 1 : -1;
+		lastId = id;
+	}
+
 	// ********************************************* xxx
 	onMount(() => {
 		const date = selected ? selected : today;
@@ -513,7 +525,6 @@
 							<div slotx="contents">
 								<div class="calendar-wrapper">
 									<div class="calendar">
-
 										<div class="Navbar title">
 											<div class="heading-section">
 												<div
@@ -555,14 +566,19 @@
 												<span>{day[1]}</span>
 											{/each}
 										</div>
-										<Month
-											{visibleMonth}
-											{selected}
-											{highlighted}
-											{shouldShakeDate}
-											id={visibleMonthId}
-											on:dateSelected={(e) => registerSelection(e.detail)}
-										/>
+
+										<div class="Month month-container">
+											{#each visibleMonth.weeks as week (week.id)}
+												<Week
+													days={week.days}
+													{selected}
+													{highlighted}
+													{shouldShakeDate}
+													{direction}
+													on:dateSelected={(e) => registerSelection(e.detail)}
+												/>
+											{/each}
+										</div>
 									</div>
 								</div>
 							</div>

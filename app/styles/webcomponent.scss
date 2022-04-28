@@ -82,6 +82,16 @@ $calendar-padding: 0 10px 10px 10px !default;
 $day-is-disalbed-opacity: 0.35 !default;
 $day-is-outside-month-opacity: 0.75 !default;
 
+// **************************************************** month.scss
+// Language: scss
+.month-container {
+	width: 100%;
+	display: -ms-grid;
+	display: grid;
+	-ms-grid-columns: 1fr;
+	-ms-grid-rows: 1fr;
+}
+
 // **************************************************** navbar.scss
 // Language: scss
 
