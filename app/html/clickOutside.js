@@ -5,10 +5,12 @@
  * @param _options
  */
 export default (node, _options = {}) => {
-	const options = { include: [], ..._options };
+	// const options = { include: [], ..._options };
 
-	function detect({ target }) {
-		if (!node.contains(target) || options.include.some((i) => target.isSameNode(i))) {
+	function detect(event) {
+		const isTarget = event.composedPath().includes(node);
+		if (!isTarget) {
+			// if (!node.contains(target) || options.include.some((i) => target.isSameNode(i))) {
 			node.dispatchEvent(new CustomEvent("clickOutside"));
 		}
 	}

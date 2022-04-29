@@ -11,9 +11,6 @@
 #webcomponent {
 	position: relative;
 }
-.w-full {
-	width: 100%;
-}
 
 $calendar-btn-padding: 10px 10px !default;
 $calendar-btn-border-radius: 7px !default;
@@ -265,10 +262,10 @@ $day-is-outside-month-opacity: 0.75 !default;
 }
 
 .contents-wrapper {
-	transform: translate(-50%, -50%);
 	position: fixed;
-	/*top: 50%;*/
-	/*left: 50%;*/
+	// transform: translate(-50%, -50%);
+	// top: 50%;
+	// left: 50%;
 	transition: none;
 	z-index: 11;
 	display: none;

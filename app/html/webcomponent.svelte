@@ -12,7 +12,7 @@
 	 */
 	// import webcomponent from "@app/functions/webcomponent";
 	// import { translate } from "@app/translations/translate";
-	import { onMount, tick } from "svelte";
+	import { onMount, tick, createEventDispatcher } from "svelte";
 	import { fly, fade } from "svelte/transition";
 	import { formatDate } from "@app/utils/date";
 	import { keyCodes, keyCodesArray } from "./keyCodes";
@@ -20,17 +20,13 @@
 	import ClickOutside from "./ClickOutside";
 	import { get_current_component } from "svelte/internal";
 
-	const thisComponent = get_current_component();
-	const dispatchEvent = (name, detail) => {
-		thisComponent.dispatchEvent(
-			new CustomEvent(name, {
-				detail,
-				composed: true, // propagate to the Real DOM, handled in index.html
-			}),
-		);
+	const component = get_current_component();
+	const svelteDispatch = createEventDispatcher();
+	const dispatch = (name, detail) => {
+		svelteDispatch(name, detail);
+		component.dispatchEvent && component.dispatchEvent(new CustomEvent(name, { detail }));
 	};
 
-	const dispatch = dispatchEvent;
 	const today = new Date();
 	const oneYear = 1000 * 60 * 60 * 24 * 365;
 
@@ -475,115 +471,120 @@
 
 <svelte:window bind:innerWidth={w} />
 
-<div id="webcomponent" part="webcomponent">
-	<div class="datepicker" class:open={isOpen} class:closing={isClosing} style={wrapperStyle}>
-		<div class="sc-popover" bind:this={popover} use:ClickOutside on:clickOutside={clickOutside}>
-			<div class="trigger" on:click={doOpenPopOver} bind:this={triggerContainer}>
-				<div slotx="trigger">
-					<slot {selected} {formattedSelected}>
-						{#if !trigger}
-							<button class="calendar-button" type="button">
-								{formattedSelected || "-"}
-							</button>
-						{/if}
-					</slot>
-				</div>
+<div
+	id="webcomponent"
+	part="webcomponent"
+	class="datepicker"
+	class:open={isOpen}
+	class:closing={isClosing}
+	style={wrapperStyle}
+>
+	<div class="sc-popover" bind:this={popover} use:ClickOutside on:clickOutside={clickOutside}>
+		<div class="trigger" on:click={doOpenPopOver} bind:this={triggerContainer}>
+			<div slotx="trigger">
+				<slot {selected} {formattedSelected}>
+					{#if !trigger}
+						<button class="calendar-button" type="button">
+							{formattedSelected || "-"}
+						</button>
+					{/if}
+				</slot>
 			</div>
+		</div>
 
-			<div
-				class="contents-wrapper"
-				class:visible={isOpen}
-				class:shrink={isClosing}
-				style="transform: translate(-50%,-50%) translate({translateX}px, {translateY}px)"
-				bind:this={contentsWrapper}
-			>
-				<div class="contents" bind:this={contentsAnimated}>
-					<div class="contents-inner">
-						{#if isOpen}
-							<div slotx="contents">
-								<div class="calendar-wrapper">
-									<div class="calendar">
-										<div class="Navbar title">
-											<div class="heading-section">
-												<div
-													class="control"
-													class:enabled={canDecrementMonth}
-													on:click={() => incrementMonth(-1)}
-												>
-													<i class="arrow left" />
-												</div>
-												<div class="label" on:click={toggleMonthSelectorOpen}>
-													{monthsOfYear[month][0]}
-													{year}
-												</div>
-												<div
-													class="control"
-													class:enabled={canIncrementMonth}
-													on:click={() => incrementMonth(1)}
-												>
-													<i class="arrow right" />
-												</div>
+		<div
+			class="contents-wrapper"
+			class:visible={isOpen}
+			class:shrink={isClosing}
+			style="transform: translate(-50%,-50%) translate({translateX}px, {translateY}px)"
+			bind:this={contentsWrapper}
+		>
+			<div class="contents" bind:this={contentsAnimated}>
+				<div class="contents-inner">
+					{#if isOpen}
+						<div slotx="contents">
+							<div class="calendar-wrapper">
+								<div class="calendar">
+									<div class="Navbar title">
+										<div class="heading-section">
+											<div
+												class="control"
+												class:enabled={canDecrementMonth}
+												on:click={() => incrementMonth(-1)}
+											>
+												<i class="arrow left" />
 											</div>
-											<div class="month-selector" class:open={monthSelectorOpen}>
-												{#each availableMonths as monthDefinition, index}
-													<div
-														class="month-selector--month"
-														class:selected={index === month}
-														class:selectable={monthDefinition.selectable}
-														on:click={(e) =>
-															navbarMonthSelected(e, { m: monthDefinition, i: index })}
-													>
-														<span>{monthDefinition.abbrev}</span>
-													</div>
-												{/each}
+											<div class="label" on:click={toggleMonthSelectorOpen}>
+												{monthsOfYear[month][0]}
+												{year}
+											</div>
+											<div
+												class="control"
+												class:enabled={canIncrementMonth}
+												on:click={() => incrementMonth(1)}
+											>
+												<i class="arrow right" />
 											</div>
 										</div>
-
-										<div class="legend">
-											{#each sortedDaysOfWeek as day}
-												<span>{day[1]}</span>
-											{/each}
-										</div>
-
-										<div class="Month month-container">
-											{#each visibleMonth.weeks as week (week.id)}
+										<div class="month-selector" class:open={monthSelectorOpen}>
+											{#each availableMonths as monthDefinition, index}
 												<div
-													class="Week week"
-													in:fly|local={{ x: direction * 50, duration: 180, delay: 90 }}
-													out:fade|local={{ duration: 180 }}
+													class="month-selector--month"
+													class:selected={index === month}
+													class:selectable={monthDefinition.selectable}
+													on:click={(e) =>
+														navbarMonthSelected(e, { m: monthDefinition, i: index })}
 												>
-													{#each week.days as day}
-														<div
-															class="day"
-															class:outside-month={!day.partOfMonth}
-															class:is-today={day.isToday}
-															class:is-disabled={!day.selectable}
-														>
-															<button
-																class="day--label"
-																class:selected={areDatesEquivalent(day.date, selected)}
-																class:highlighted={areDatesEquivalent(
-																	day.date,
-																	highlighted,
-																)}
-																class:shake-date={shouldShakeDate &&
-																	areDatesEquivalent(day.date, shouldShakeDate)}
-																class:disabled={!day.selectable}
-																type="button"
-																on:click={() => registerSelection(day.date)}
-															>
-																{day.date.getDate()}
-															</button>
-														</div>
-													{/each}
+													<span>{monthDefinition.abbrev}</span>
 												</div>
 											{/each}
 										</div>
 									</div>
+
+									<div class="legend">
+										{#each sortedDaysOfWeek as day}
+											<span>{day[1]}</span>
+										{/each}
+									</div>
+
+									<div class="Month month-container">
+										{#each visibleMonth.weeks as week (week.id)}
+											<div
+												class="Week week"
+												in:fly|local={{ x: direction * 50, duration: 180, delay: 90 }}
+												out:fade|local={{ duration: 180 }}
+											>
+												{#each week.days as day}
+													<div
+														class="day"
+														class:outside-month={!day.partOfMonth}
+														class:is-today={day.isToday}
+														class:is-disabled={!day.selectable}
+													>
+														<button
+															class="day--label"
+															class:selected={areDatesEquivalent(day.date, selected)}
+															class:highlighted={areDatesEquivalent(
+																day.date,
+																highlighted,
+															)}
+															class:shake-date={shouldShakeDate &&
+																areDatesEquivalent(day.date, shouldShakeDate)}
+															class:disabled={!day.selectable}
+															type="button"
+															on:click={() => registerSelection(day.date)}
+														>
+															{day.date.getDate()}
+														</button>
+													</div>
+												{/each}
+											</div>
+										{/each}
+									</div>
 								</div>
 							</div>
-						{/if}
-					</div>
+						</div>
+					{/if}
 				</div>
 			</div>
 		</div>
