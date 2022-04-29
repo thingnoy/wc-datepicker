@@ -365,21 +365,24 @@
 		let dist = await getDistanceToEdges();
 		let x;
 		let y;
+		let padding = w < 480 ? 0 : 10;
+
 		if (w < 480) {
-			y = dist.bottom;
+			y = dist.bottom + padding;
 		} else if (dist.top < 0) {
-			y = Math.abs(dist.top);
+			y = Math.abs(dist.top) + padding;
 		} else if (dist.bottom < 0) {
-			y = dist.bottom;
+			y = dist.bottom + -padding;
 		} else {
-			y = 0;
+			y = padding;
 		}
+
 		if (dist.left < 0) {
-			x = Math.abs(dist.left);
+			x = Math.abs(dist.left) + padding;
 		} else if (dist.right < 0) {
-			x = dist.right;
+			x = dist.right + -padding;
 		} else {
-			x = 0;
+			x = padding;
 		}
 		return { x, y };
 	}
